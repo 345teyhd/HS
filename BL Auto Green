@@ -1,0 +1,35 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local shootEvent = ReplicatedStorage.Packages.Knit.Services.ControlService.RE:WaitForChild("Shoot")
+local bar = playerGui:WaitForChild("Visual"):WaitForChild("Shooting"):WaitForChild("Bar")
+
+local shotCount = 0
+local fired = false
+local lastScale = 0
+
+RunService.RenderStepped:Connect(function()
+	local scale = bar.Size.Y.Scale
+	
+	if scale > lastScale and scale < 0.5 then
+		fired = false
+	end
+	
+	if bar.Visible and not fired and scale >= 0.8 then
+		fired = true
+		
+		if shotCount % 2 == 0 then
+			shootEvent:FireServer(0.95)
+		else
+			shootEvent:FireServer(1.0)
+		end
+		
+		shotCount = shotCount + 1
+	end
+	
+	lastScale = scale
+end)
