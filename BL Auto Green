@@ -1,0 +1,104 @@
+local players = game:GetService("Players")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local collectionService = game:GetService("CollectionService")
+
+local player = players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+local REBOUND_ANIM_SPEED = 2.4
+local TARGET_JUMP_POWER = 50
+local reboundTrack = nil
+local isJumping = false
+
+local reboundAnimation = replicatedStorage.Assets.Animations_R15.Rebound
+reboundTrack = humanoid:LoadAnimation(reboundAnimation)
+
+local function playReboundAnimation()
+	if not reboundTrack.IsPlaying then
+		reboundTrack:Stop()
+		reboundTrack.TimePosition = 0
+		reboundTrack:Play()
+		reboundTrack:AdjustSpeed(REBOUND_ANIM_SPEED)
+	end
+end
+
+local function findNearestWorkspaceBall()
+	local closestBall = nil
+	local closestDistance = math.huge
+	
+	local basketballs = collectionService:GetTagged("Basketball")
+	for _, ball in pairs(basketballs) do
+		if ball:IsA("BasePart") and ball.Parent == workspace then
+			local distance = (humanoidRootPart.Position - ball.Position).Magnitude
+			if distance < closestDistance then
+				closestDistance = distance
+				closestBall = ball
+			end
+		end
+	end
+	
+	for _, ball in pairs(workspace:GetChildren()) do
+		if ball:IsA("BasePart") and ball.Name == "Basketball" then
+			local distance = (humanoidRootPart.Position - ball.Position).Magnitude
+			if distance < closestDistance then
+				closestDistance = distance
+				closestBall = ball
+			end
+		end
+	end
+	
+	return closestBall
+end
+
+spawn(function()
+	while true do
+		if isJumping then
+			local ball = findNearestWorkspaceBall()
+			if ball and humanoidRootPart then
+				firetouchinterest(humanoidRootPart, ball, 0)
+				firetouchinterest(humanoidRootPart, ball, 1)
+			end
+		end
+		wait()
+	end
+end)
+
+spawn(function()
+	while true do
+		if humanoid then
+			humanoid.JumpPower = TARGET_JUMP_POWER
+		end
+		wait()
+	end
+end)
+
+local function onJump()
+	playReboundAnimation()
+	isJumping = true
+end
+
+local function onLand()
+	isJumping = false
+end
+
+humanoid.StateChanged:Connect(function(oldState, newState)
+	if newState == Enum.HumanoidStateType.Jumping then
+		onJump()
+	end
+	
+	if oldState == Enum.HumanoidStateType.Jumping and newState == Enum.HumanoidStateType.Landed then
+		onLand()
+	end
+end)
+
+local function onCharacterAdded(newCharacter)
+	character = newCharacter
+	humanoid = character:WaitForChild("Humanoid")
+	humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+	reboundTrack = humanoid:LoadAnimation(reboundAnimation)
+	isJumping = false
+end
+
+player.CharacterAdded:Connect(onCharacterAdded)
